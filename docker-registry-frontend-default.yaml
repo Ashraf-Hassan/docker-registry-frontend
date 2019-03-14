@@ -1,0 +1,60 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels:
+  name: docker-registry-frontend
+  namespace: registry
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      k8s-app: docker-registry-frontend
+  template:
+    metadata:
+      labels:
+        k8s-app: docker-registry-frontend
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/infra: infra
+      containers:
+      - name: docker-registry-frontend
+        image: docker.io/konradkleine/docker-registry-frontend:v2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort:  80
+          protocol: TCP
+        env:
+        - name: ENV_DOCKER_REGISTRY_HOST
+          value: "Put Your Registry Host Here"
+        - name: ENV_DOCKER_REGISTRY_PORT
+          value: "5000"
+        - name: ENV_MODE_BROWSE_ONLY
+          #change it to true if you want browse only mode where no one perform any changes"
+          value: "false"
+        livenessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+---
+# ------------------- Dashboard Service ------------------- #
+
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    k8s-app: docker-registry-frontend
+  name: docker-registry-frontend
+  namespace: registry
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  selector:
+    k8s-app: docker-registry-frontend
